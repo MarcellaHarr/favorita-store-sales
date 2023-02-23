@@ -62,8 +62,9 @@ select top 10 *
 from dbo.holidays_events;
 
 
--- 5.) view stores, transactions, & train tables
---          QST1: What stores have the max transactions?
+-- 5.) view stores, transactions
+
+--==          qst#1: What stores have the maximum transactions? ==--
 ;with storeTrans_cte
 as
 (
@@ -86,5 +87,8 @@ select *
 into ##qstOne
 from storesWithTrans;
 
+--
 select * 
 from ##qstOne;
+
+--== Unsorted table with 54 records ==--
