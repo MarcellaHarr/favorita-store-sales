@@ -60,3 +60,31 @@ from dbo.oil;
 
 select top 10 * 
 from dbo.holidays_events;
+
+
+-- 5.) view stores, transactions, & train tables
+--          QST1: What stores have the max transactions?
+;with storeTrans_cte
+as
+(
+    select store_nbr,
+            max(transactions) as max_trans
+    from dbo.transactions
+    group by store_nbr
+),
+storesWithTrans as
+(
+    select sto.store_nbr,
+        sto.city,
+        sto.[state],
+        st.max_trans
+from dbo.stores sto
+inner join storeTrans_cte st 
+    on sto.store_nbr = st.store_nbr
+)
+select * 
+into ##qstOne
+from storesWithTrans;
+
+select * 
+from ##qstOne;
