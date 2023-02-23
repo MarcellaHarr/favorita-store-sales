@@ -79,30 +79,125 @@ storesWithTrans as
         sto.city,
         sto.[state],
         st.max_trans
-from dbo.stores sto
-inner join storeTrans_cte st 
-    on sto.store_nbr = st.store_nbr
+    from dbo.stores sto
+    inner join storeTrans_cte st 
+        on sto.store_nbr = st.store_nbr
 )
 select * 
-into ##qstOne
+into ##qst1
 from storesWithTrans;
 
 --
 select * 
-from ##qstOne;
+from ##qst1
+order by max_trans desc;
 
---== Unsorted table with 54 records ==--
+--== Sorted table with 54 records ==--
+--== Stores in Pichincha & Tungurahua state are top 10 ==--
 
 
 
 -- .) view stores and train table
 
 --==        qst#Two: Which stores had the most on promotions?
+;with storePromos_cte
+as
+(
+    select store_nbr,
+            sum(onpromotion) as tot_promos
+    from dbo.train
+    group by store_nbr
+),
+storeDetails as 
+(
+    select sto.store_nbr,
+            sto.city,
+            sto.[state],
+            sp.tot_promos
+    from dbo.stores sto
+    inner join storePromos_cte sp
+        on sto.store_nbr = sp.store_nbr
+)
+select *
+into ##qst2
+from storeDetails;
+
+--
+select * 
+from ##qst2
+order by tot_promos desc;
+
+--== 54 records total ==--
+--== Stores in Manabi, Pichincha, and Tungurahua state are the top 10 ==--
+
 
 
 -- .) view train, stores, and holidays and events table
 
 --==        qst#: Were promotions in relation to the holidays and events?
+--==        select average(onpromotion) from cte where type = "Transfer"
+;with storeAvgPromos_cte
+as
+(
+    select store_nbr,
+            [date],
+            family,
+            avg(onpromotion) as avg_promos
+    from dbo.train
+    group by store_nbr, [date], family
+),
+storeWithAvgPromos as 
+(
+    select sto.store_nbr,
+            sto.city,
+            sto.[state],
+            sap.[date],
+            sap.family,
+            sap.avg_promos
+    from dbo.stores sto 
+    inner join storeAvgPromos_cte sap
+        on sto.store_nbr = sap.store_nbr
+),
+storeAvgPromoHoldayEvents as 
+(
+    select swap.store_nbr,
+            swap.family,
+            swap.city,
+            swap.[state],
+            swap.[date],
+            he.[type],
+            he.locale_name,
+            he.[description],
+            he.transferred,
+            swap.avg_promos
+    from dbo.holidays_events he
+    inner join storeWithAvgPromos swap
+        on he.[date] = swap.[date]
+)
+select * 
+into ##qst3Table
+from storeAvgPromoHoldayEvents;
+
+--
+select *
+from ##qst3Table;
+
+--== 502524 records ==--
+
+--== A transferred day is more like a normal day than a holiday. To find the day that it 
+--== was actually celebrated, look for the corresponding row where type is Transfer. ==--
+select *
+into ##qst3Transfer
+from ##qst3Table
+where [type] = 'Transfer';
+
+-- 
+select *
+from ##qst3Transfer
+order by avg_promos desc;
+
+--== 16038 records ==--
+
 
 
 -- .) view stores and train table
