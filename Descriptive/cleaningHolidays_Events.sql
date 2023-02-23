@@ -52,3 +52,16 @@ from dbo.holidays_events;
 
 --== converted the date col and duplicated it under a new col ==--
 
+
+-- 6.) Drop date col
+alter table holidays_events 
+drop column date;
+
+select top 10 *
+from dbo.holidays_events;
+
+-- 7.) rename date col
+sp_rename 'holidays_events.hol_date', 'date', 'COLUMN';
+
+
+--== hol_date --> date ==--

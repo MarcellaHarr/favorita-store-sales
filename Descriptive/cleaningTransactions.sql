@@ -51,3 +51,17 @@ select top 10 *
 from dbo.transactions;
 
 --== converted the date col and saved to new col ==--
+
+
+-- 6.) Drop date col
+alter table transactions 
+drop column date;
+
+select top 10 *
+from dbo.transactions;
+
+-- 7.) rename date col
+sp_rename 'transactions.trn_date', 'date', 'COLUMN';
+
+
+--== trn_date --> date ==--

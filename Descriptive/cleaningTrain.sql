@@ -52,3 +52,17 @@ from dbo.train;
 
 
 --== converted date col ==--
+
+
+-- 7.) Drop date col
+alter table train 
+drop column date;
+
+select top 10 *
+from dbo.train;
+
+-- 8.) rename date col
+sp_rename 'train.train_date', 'date', 'COLUMN';
+
+
+--== train_date --> date ==--

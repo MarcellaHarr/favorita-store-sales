@@ -66,3 +66,16 @@ from dbo.oil;
 
 --== converted the date col and duplicated it under a new col ==--
 
+
+-- 7.) Drop date col
+alter table oil 
+drop column date;
+
+select top 10 *
+from dbo.oil;
+
+-- 8.) rename date col
+sp_rename 'oil.oil_date', 'date', 'COLUMN';
+
+
+--== oil_date --> date ==--
