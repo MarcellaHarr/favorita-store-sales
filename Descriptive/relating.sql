@@ -92,3 +92,34 @@ select *
 from ##qstOne;
 
 --== Unsorted table with 54 records ==--
+
+
+
+-- .) view stores and train table
+
+--==        qst#Two: Which stores had the most on promotions?
+
+
+-- .) view train, stores, and holidays and events table
+
+--==        qst#: Were promotions in relation to the holidays and events?
+
+
+-- .) view stores and train table
+
+--==        qst#Three: Which stores had the most sales?
+
+
+-- .)
+
+--==        qst#: How much did sales suffer from the earthquake in Ecuador on 2016-04-16?
+
+
+-- .) view trains and transactions table
+
+--==        qst#: How are sales impacted by bi-weekly pay periods of the 15th & last day of each month?
+
+
+-- .) view train and stores table
+
+--==        qst#: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
