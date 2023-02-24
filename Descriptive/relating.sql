@@ -97,7 +97,7 @@ order by max_trans desc;
 
 
 
--- .) view stores and train table
+-- 6.) view stores and train table
 
 --==        qst#Two: Which stores had the most on promotions?
 ;with storePromos_cte
@@ -128,11 +128,12 @@ from ##qst2
 order by tot_promos desc;
 
 --== 54 records total ==--
---== Stores in Manabi, Pichincha, and Tungurahua state are the top 10 ==--
+--== stores in Manabi, Pichincha, and Tungurahua state are the top 10 ==--
+--== store 53 has the most on promotions ==--
 
 
 
--- .) view train, stores, and holidays and events table
+-- 7.) view train, stores, and holidays and events table
 
 --==        qst#: Were promotions in relation to the holidays and events?
 --==        select average(onpromotion) from cte where type = "Transfer"
@@ -144,6 +145,7 @@ as
             family,
             avg(onpromotion) as avg_promos
     from dbo.train
+    where onpromotion != 0
     group by store_nbr, [date], family
 ),
 storeWithAvgPromos as 
@@ -180,9 +182,19 @@ from storeAvgPromoHoldayEvents;
 
 --
 select *
-from ##qst3Table;
+from ##qst3Table
+order by avg_promos desc;
 
---== 502524 records ==--
+--== 116630 records ==--
+--== top 10: 2 stores were in the Ecuador location mostly in the month of May on different days
+--==         and once on April 30, 2016. ==--
+--== store #s 53 and 36 ==--
+--== type product of Grocery l ==--
+--== 2 states Manabi and Guayas ==--
+--== types Event / Holiday / Transfer / Additional ==--
+--== top 10: transferred 1 true the rest false ==--
+--== top 10: avg promotions 720 / 718 / 717/ 716 / 710 / 702 / 697 / 672 ==--
+
 
 --== A transferred day is more like a normal day than a holiday. To find the day that it 
 --== was actually celebrated, look for the corresponding row where type is Transfer. ==--
@@ -196,7 +208,19 @@ select *
 from ##qst3Transfer
 order by avg_promos desc;
 
---== 16038 records ==--
+--== 6312 records ==--
+--== top 10: 4 stores were in the Ecuador location on the same date of May 27, 2016 ==--
+--== store #s 53, 54, 48, and 45 ==--
+--== type of products Grocery l / Beverages / Cleaning / Dairy / and Produce ==--
+--== 2 states Manabi and Pichincha ==--
+--== top 10: avg promotions 716 / 473 / 290 / 269 / 191 / 166 / 165 / 145 / 138
+
+--
+select *
+from ##qst3Transfer
+where transferred = 'True';
+
+--== Zero records, transferred col are all false ==--
 
 
 
