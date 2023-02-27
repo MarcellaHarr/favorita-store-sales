@@ -84,12 +84,7 @@ storesWithTrans as
         on sto.store_nbr = st.store_nbr
 )
 select * 
-into ##qst1
-from storesWithTrans;
-
---
-select * 
-from ##qst1
+from storesWithTrans
 order by max_trans desc;
 
 --== Sorted table with 54 records ==--
@@ -99,18 +94,20 @@ order by max_trans desc;
 
 -- 6.) view stores and train table
 
---==        qst#Two: Which stores had the most on promotions?
+--==        qst#2: Which stores had the most on-promotions?
 ;with storePromos_cte
 as
 (
     select store_nbr,
+            family,
             sum(onpromotion) as tot_promos
     from dbo.train
-    group by store_nbr
+    group by store_nbr, family
 ),
 storeDetails as 
 (
-    select sto.store_nbr,
+    select sp.store_nbr,
+            sp.family,
             sto.city,
             sto.[state],
             sp.tot_promos
@@ -119,15 +116,10 @@ storeDetails as
         on sto.store_nbr = sp.store_nbr
 )
 select *
-into ##qst2
-from storeDetails;
-
---
-select * 
-from ##qst2
+from storeDetails
 order by tot_promos desc;
 
---== 54 records total ==--
+--== 1782 records total ==--
 --== stores in Manabi, Pichincha, and Tungurahua state are the top 10 ==--
 --== store 53 has the most on promotions ==--
 
@@ -135,98 +127,87 @@ order by tot_promos desc;
 
 -- 7.) view train, stores, and holidays and events table
 
---==        qst#: Were promotions in relation to the holidays and events?
+--==        qst#Three: Were promotions in relation to the holidays and events?
 --==        select average(onpromotion) from cte where type = "Transfer"
-;with storeAvgPromos_cte
+;with storeDeets
 as
 (
-    select store_nbr,
-            [date],
-            family,
-            avg(onpromotion) as avg_promos
-    from dbo.train
-    where onpromotion != 0
-    group by store_nbr, [date], family
-),
-storeWithAvgPromos as 
-(
-    select sto.store_nbr,
-            sto.city,
-            sto.[state],
-            sap.[date],
-            sap.family,
-            sap.avg_promos
-    from dbo.stores sto 
-    inner join storeAvgPromos_cte sap
-        on sto.store_nbr = sap.store_nbr
-),
-storeAvgPromoHoldayEvents as 
-(
-    select swap.store_nbr,
-            swap.family,
-            swap.city,
-            swap.[state],
-            swap.[date],
-            he.[type],
-            he.locale_name,
-            he.[description],
-            he.transferred,
-            swap.avg_promos
-    from dbo.holidays_events he
-    inner join storeWithAvgPromos swap
-        on he.[date] = swap.[date]
+    select t.store_nbr,
+            t.family,
+            t.onpromotion,
+            t.[date],
+            avg((t.onpromotion)) as avg_promos,
+            cast((avg(t.onpromotion) - lag (avg(t.onpromotion)) 
+                 over( order by t.[date] asc
+                     ))/ lag(avg(t.onpromotion)) 
+                 over ( order by t.[date] asc)*100 as float) as promo_growth
+    from dbo.train t 
+    join dbo.stores sto on t.store_nbr = sto.store_nbr
+    where sto.store_nbr = t.store_nbr and
+            t.onpromotion <> 0
+    group by t.store_nbr, t.family,
+             t.onpromotion, t.[date]
 )
-select * 
-into ##qst3Table
-from storeAvgPromoHoldayEvents;
-
---
+,storeHolidays as
+(
+    select st.store_nbr,
+            he.locale_name,
+            st.family,
+            he.[type],
+            he.transferred,
+            he.[date],
+            st.avg_promos,
+            st.promo_growth
+    from dbo.holidays_events he
+    join storeDeets st on he.[date] = st.[date]
+    where st.[date] = he.[date]
+    group by st.store_nbr, he.locale_name, st.family,
+            he.[type], he.transferred, he.[date],
+            st.onpromotion, st.avg_promos, st.promo_growth
+)
 select *
-from ##qst3Table
-order by avg_promos desc;
-
---== 116630 records ==--
---== top 10: 2 stores were in the Ecuador location mostly in the month of May on different days
---==         and once on April 30, 2016. ==--
---== store #s 53 and 36 ==--
---== type product of Grocery l ==--
---== 2 states Manabi and Guayas ==--
---== types Event / Holiday / Transfer / Additional ==--
---== top 10: transferred 1 true the rest false ==--
---== top 10: avg promotions 720 / 718 / 717/ 716 / 710 / 702 / 697 / 672 ==--
-
-
---== A transferred day is more like a normal day than a holiday. To find the day that it 
---== was actually celebrated, look for the corresponding row where type is Transfer. ==--
-select *
-into ##qst3Transfer
-from ##qst3Table
-where [type] = 'Transfer';
-
--- 
-select *
-from ##qst3Transfer
-order by avg_promos desc;
+from storeHolidays
+where [type] = 'Transfer'
+order by promo_growth desc;
 
 --== 6312 records ==--
---== top 10: 4 stores were in the Ecuador location on the same date of May 27, 2016 ==--
---== store #s 53, 54, 48, and 45 ==--
---== type of products Grocery l / Beverages / Cleaning / Dairy / and Produce ==--
---== 2 states Manabi and Pichincha ==--
---== top 10: avg promotions 716 / 473 / 290 / 269 / 191 / 166 / 165 / 145 / 138
 
---
+--== DATA NOTES: A transferred day is more like a normal day than a holiday. To find 
+--==            the day that it was actually celebrated, look for the corresponding 
+--==            row where type is Transfer. ==--
+
+--==    Type transfer has Transferred as false, assuming that the dates are the actual dates
+--==    the holiday or event fell on but wasn't move to another date by the government.
+--==    I see that the promoted items of a store were promoted higher than the items that
+--==    were being promoted.
+
+
+
+
+-- .8) view stores and train table
+
+--==        qst#Four: Which stores had the most sales?
+;with storeMostSales
+as 
+(
+    select t.store_nbr,
+            sto.city,
+            sto.[state],
+            sum(t.sales) as tot_sales
+    from dbo.train t
+    join dbo.stores sto on sto.store_nbr = t.store_nbr
+    where sto.store_nbr = t.store_nbr
+    group by t.store_nbr, sto.city, sto.[state]
+)
 select *
-from ##qst3Transfer
-where transferred = 'True';
-
---== Zero records, transferred col are all false ==--
+from storeMostSales sms
+order by tot_sales desc;
 
 
 
--- .) view stores and train table
+-- .) 
 
---==        qst#Three: Which stores had the most sales?
+--==        qst#: Which stores had the most sales by family/day?
 
 
 -- .)
