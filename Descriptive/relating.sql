@@ -127,7 +127,7 @@ order by tot_promos desc;
 
 -- 7.) view train, stores, and holidays and events table
 
---==        qst#Three: Were promotions in relation to the holidays and events?
+--==        qst#3: Were promotions in relation to the holidays and events?
 --==        select average(onpromotion) from cte where type = "Transfer"
 ;with storeDeets
 as
@@ -186,7 +186,7 @@ order by promo_growth desc;
 
 -- .8) view stores and train table
 
---==        qst#Four: Which stores had the most sales?
+--==        qst#4a: Which stores had the most sales?
 ;with storeMostSales
 as 
 (
@@ -203,11 +203,98 @@ select *
 from storeMostSales sms
 order by tot_sales desc;
 
+--== 54 records ==--
+--== Store number 44 had the most sales ==--
 
 
--- .) 
 
---==        qst#: Which stores had the most sales by family/day?
+-- .9) view stores and train
+
+--==        qst#4b: Which stores had the most sales by family/day?
+;with storesWithSalesFamilyDate
+as 
+(
+    select t.store_nbr,
+            t.family,
+            sto.city,
+            sto.[state],
+            t.[date],
+            sum(t.sales) as tot_sales
+    from dbo.train t
+    join dbo.stores sto on sto.store_nbr = t.store_nbr
+    group by t.store_nbr, t.family, sto.city,
+            sto.[state], t.[date]
+)
+select *
+from storesWithSalesFamilyDate
+order by tot_sales desc;
+
+--== 3000888 records ==--
+--== 00:00:35.277 to run ==--
+--== Store number 2 had the most sales under the Grocery l on the date
+--== of 2016-05-02 ==--
+
+
+
+-- .10) view stores and train
+
+--==        qst#4c: What were the averages and growth rate of sales by family/date?
+;with storesWithAveragesGrowth
+as 
+(
+    select t.store_nbr,
+            t.family,
+            sto.[state],
+            t.[date],
+            avg(t.sales) as avg_sales,
+            lag(t.sales) over (order by t.[date]) as daily_sales,
+            t.sales - lag(t.sales) over (order by t.[date]) as sales_difference
+    from dbo.train t
+    join dbo.stores sto on sto.store_nbr = t.store_nbr
+    group by t.store_nbr, t.family, sto.city,
+            sto.[state], t.[date], t.sales
+)
+select *
+from storesWithAveragesGrowth;
+
+
+
+
+-- .11) view stores and train
+
+--==        **qst#4d: What were the sales difference by family/YR/MTH?
+;with storeSalesWithMonthlyMetrics
+as 
+(
+    select t.store_nbr,
+            t.family,
+            sto.[state],
+            format(t.[date], 'yyyy') as yr,
+            format(t.[date], 'MM') as mth,
+            sum(t.sales) as revenue
+    from dbo.train t 
+    join dbo.stores sto on sto.store_nbr = t.store_nbr
+    where t.store_nbr = sto.store_nbr
+    group by t.store_nbr, t.family, sto.[state], t.[date]
+)
+select ssmm.store_nbr,
+        ssmm.family,
+        ssmm.[state],
+        ssmm.yr as curr_yr,
+        ssmm.mth as curr_mth,
+        ssmm.revenue as curr_mth_revenue,
+        lag(ssmm.yr, 12) over (order by ssmm.yr, ssmm.mth) as prev_yr,
+        lag(ssmm.mth, 12) over (order by ssmm.yr, ssmm.mth) as comp_mth,
+        lag(ssmm.revenue, 12) over (order by ssmm.yr, ssmm.mth) as prev_12_mths,
+        ssmm.revenue - lag(ssmm.revenue, 12) over (order by ssmm.yr, ssmm.mth) as mth2mth_diff
+from storeSalesWithMonthlyMetrics ssmm
+order by curr_yr, curr_mth;
+
+
+
+--== 3000888 records ==--
+--== 00:00:21.194 to run ==--
+--== Earlies date 2013-01-01 to latest date 2017-08-15 ==--
 
 
 -- .)
