@@ -1,6 +1,6 @@
 # Corporación Favorita Analysis
 
-![](/src/img/corporacion-la-favorita.jpg) source: https://marcasecuador.club/corporacion-favorita/
+![](/src/images/corporacion-la-favorita.jpg) source: https://marcasecuador.club/corporacion-favorita/
 
 <br />
 
