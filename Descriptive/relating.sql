@@ -239,6 +239,25 @@ order by tot_sales desc;
 -- .10) view stores and train
 
 --==        qst#4c: What were the averages and growth rate of sales by family/date?
+-- ;with storesWithAveragesGrowth
+-- as 
+-- (
+--     select t.store_nbr,
+--             t.family,
+--             sto.[state],
+--             t.[date],
+--             avg(t.sales) as avg_sales,
+--             lag(t.sales) over (order by t.[date]) as daily_sales,
+--             t.sales - lag(t.sales) over (order by t.[date]) as sales_difference
+--     from dbo.train t
+--     join dbo.stores sto on sto.store_nbr = t.store_nbr
+--     group by t.store_nbr, t.family, sto.city,
+--             sto.[state], t.[date], t.sales
+-- )
+-- select *
+-- from storesWithAveragesGrowth;
+
+
 ;with storesWithAveragesGrowth
 as 
 (
@@ -247,14 +266,16 @@ as
             sto.[state],
             t.[date],
             avg(t.sales) as avg_sales,
-            lag(t.sales) over (order by t.[date]) as daily_sales,
-            t.sales - lag(t.sales) over (order by t.[date]) as sales_difference
+            lag(t.sales) over (order by t.[date]) as daily_sales
     from dbo.train t
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     group by t.store_nbr, t.family, sto.city,
             sto.[state], t.[date], t.sales
 )
-select *
+select *,
+        format(
+                (avg_sales - lag(avg_sales) over (order by [date])), 'P'
+        ) as sales_difference
 from storesWithAveragesGrowth;
 
 
@@ -297,16 +318,240 @@ order by curr_yr, curr_mth;
 --== Earlies date 2013-01-01 to latest date 2017-08-15 ==--
 
 
--- .)
+-- 12.)
 
---==        qst#: How much did sales suffer from the earthquake in Ecuador on 2016-04-16?
+--==        qst#5: How much did sales suffer from the earthquake in Ecuador on 2016-04-16?
+;with storeEarthquakeSales
+as 
+(
+        select distinct t.store_nbr as store,
+                t.family as department,
+                t.[date],
+                sum(t.sales) as revenue,
+                lag(t.sales, 1) over (
+                        partition by t.family
+                        order by t.[date]
+                ) as sale_before
+        from dbo.train t 
+        group by t.store_nbr, t.family,
+                t.[date], t.sales
+)
+select *,
+        format((revenue - sale_before) / 2, 'P') as vs_15th_of_April
+from storeEarthquakeSales
+where [date] in ('2013-04-16', '2014-04-16', '2015-04-16', '2016-04-16', '2017-04-16');
+
+--== 8910 records ==--
+--== 00:00:06.973 to run ==--
+
 
 
 -- .) view trains and transactions table
 
---==        qst#: How are sales impacted by bi-weekly pay periods of the 15th & last day of each month?
+--==        qst#6: How are sales impacted by bi-weekly pay periods of the 15th & last day of each month?
+
+
+-- select t.[date] as daily_date,
+--         sum(t.sales) as sales
+-- from dbo.train t
+--         join dbo.transactions trns on trns.store_nbr = t.store_nbr
+-- where year(t.[date]) in (2013, 2014, 2015, 2016, 2017)
+-- group by t.[date];
+
+--== ==--
+
+
+select min(t.[date]) as earliest_date,
+        max(t.[date]) as latest_date
+from dbo.train t;
+
+--== ealiest_date: 2013-01-01 | lastest_date: 2017-08-15 ==--
+
+
+;with biWeeklySales
+as
+(
+        select dateadd(day, 0, t.[date]) as paydate,
+                dateadd(week, 2, t.[date]) as bi_weekly_date,
+                sum(t.sales) as sales
+        from dbo.train t 
+        join dbo.transactions trns on trns.store_nbr = t.store_nbr
+        where t.store_nbr = trns.store_nbr
+        group by t.[date]
+)
+select * from biWeeklySales
+where day(paydate) = (15);
+
+--== 56 records ==--
+--== 00:00:23.123 to run ==--
+--== Pay day date with bi-weekly dates and total sales ==--
+
+
+;with biWeeklyLastDaySales
+as
+(
+        select dateadd(day, 0, t.[date]) as paydate,
+                dateadd(week, 2, t.[date]) as bi_weekly_date,
+                eomonth(t.[date]) as month_last_day,
+                sum(t.sales) as sales
+        from dbo.train t 
+        join dbo.transactions trns on trns.store_nbr = t.store_nbr
+        where t.store_nbr = trns.store_nbr
+        group by t.[date]
+)
+select * from biWeeklyLastDaySales
+where day(paydate) = (15);
+
+
+--== 56 records ==--
+--== 00:00:23.221 to run ==--
+--== Paydate with bi-weekly dates & last day of the month, and total sales ==--
+
+
+
+
+;with impactedDates
+as
+(
+        select dateadd(day, 0, t.[date]) as paydate,
+                dateadd(week, 2, t.[date]) as bi_weekly_date,
+                eomonth(t.[date]) as month_last_day,
+                sum(t.sales) as sales
+        from dbo.train t 
+        join dbo.transactions trns on trns.store_nbr = t.store_nbr
+        where day(dateadd(day, 0, t.[date])) = (15)
+        group by t.[date], t.sales
+)
+, impactedSales as 
+(
+        select impD.paydate,
+                impD.bi_weekly_date,
+                impD.month_last_day,
+                lag(impD.sales) over (
+                        order by impD.paydate
+                ) as prev_sales,
+                impD.sales,
+                impD.sales - lag(impD.sales) over (
+                        order by impD.paydate
+                ) as sales_diff
+        from impactedDates impD
+)
+select * from impactedSales;
+
+--== 37,627 records ==--
+--== 00:00:39.599 to run ==--
+--== Impacted sales table ==--
+
+
+
 
 
 -- .) view train and stores table
 
 --==        qst#: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
+
+
+
+-- .) view features table: 
+--              store_nbr, family, date, state, type, transferred, 
+--              transactions, onpromotion, dcoilwtico, sales
+
+--==        qst#: What is the measure of the mean & median?
+;with storeFeatsTendency
+as 
+(
+        select tr.store_nbr,
+                tr.family,
+                sto.[state],
+                he.[type],
+                he.transferred,
+                tr.[date],
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                percentile_cont(0.5) 
+                        within group (order by (tr.sales + tr.onpromotion + 
+                                                trns.transactions + ol.dcoilwtico))
+                        over (partition by tr.store_nbr) as store_median
+        from dbo.train tr 
+        join dbo.stores sto on sto.store_nbr = tr.store_nbr
+        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
+        join dbo.holidays_events he on he.[date] = tr.[date]
+        join dbo.oil ol on ol.[date] = tr.[date]
+        group by tr.store_nbr, tr.family, sto.[state],
+                 he.[type], he.transferred, tr.[date],
+                 tr.sales, tr.onpromotion, trns.transactions,
+                 ol.dcoilwtico
+)
+select *
+from storeFeatsTendency
+order by store_nbr;
+
+
+--== 304260 records ==--
+--== 00:00:05.140 to run ==--
+
+
+
+--==        qst#: What is the measure of the mean / median/ mode?
+
+;with stoFeatCentralTendency
+as 
+(
+        select tr.store_nbr,
+                tr.family,
+                sto.[state],
+                he.[type],
+                he.transferred,
+                tr.[date],
+                count(trns.transactions) as store_frequency,
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                percentile_cont(0.5) 
+                        within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
+                        over (partition by tr.store_nbr) as store_median,
+                rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
+        from dbo.train tr 
+        join dbo.stores sto on sto.store_nbr = tr.store_nbr
+        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
+        join dbo.holidays_events he on he.[date] = tr.[date]
+        join dbo.oil ol on ol.[date] = tr.[date]
+        group by tr.store_nbr, tr.family, sto.[state],
+                 he.[type], he.transferred, tr.[date],
+                 tr.sales, tr.onpromotion, trns.transactions,
+                 ol.dcoilwtico
+)
+select *
+from stoFeatCentralTendency
+where store_rank = 1
+order by store_median desc;
+
+--== 4983 records ==--
+--== 00:00:03.502 to run ==--
+--== This query removed the years 2016 and 2017 ==--
+
+
+
+;with storeWithCentralTendency
+as 
+(
+        select tr.store_nbr,
+                count(trns.transactions) as store_frequency,
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                percentile_cont(0.5) 
+                        within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
+                        over (partition by tr.store_nbr) as store_median,
+                rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
+        from dbo.train tr 
+        join dbo.stores sto on sto.store_nbr = tr.store_nbr
+        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
+        join dbo.holidays_events he on he.[date] = tr.[date]
+        join dbo.oil ol on ol.[date] = tr.[date]
+        group by tr.store_nbr, tr.sales, tr.onpromotion, 
+                trns.transactions, ol.dcoilwtico
+)
+select distinct *
+from storeWithCentralTendency
+where store_rank = 1
+order by store_median desc;
+
+--== 58 records ==--
+--== 00:00:03.603 to run ==--
+--== Noticed that store number 52 duplicates two times ==--
