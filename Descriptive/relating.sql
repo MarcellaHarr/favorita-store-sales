@@ -186,14 +186,14 @@ order by promo_growth desc;
 
 -- .8) view stores and train table
 
---==        qst#4a: Which stores had the most sales?
+--==        qst#4a: Which stores had the most unit sales?
 ;with storeMostSales
 as 
 (
     select t.store_nbr,
             sto.city,
             sto.[state],
-            sum(t.sales) as tot_sales
+            sum(t.sales) as unit_sales
     from dbo.train t
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     where sto.store_nbr = t.store_nbr
@@ -201,16 +201,16 @@ as
 )
 select *
 from storeMostSales sms
-order by tot_sales desc;
+order by unit_sales desc;
 
 --== 54 records ==--
---== Store number 44 had the most sales ==--
+--== Store number 44 had the most unit sales ==--
 
 
 
 -- .9) view stores and train
 
---==        qst#4b: Which stores had the most sales by family/day?
+--==        qst#4b: Which stores had the most unit sales by family/day?
 ;with storesWithSalesFamilyDate
 as 
 (
@@ -219,7 +219,7 @@ as
             sto.city,
             sto.[state],
             t.[date],
-            sum(t.sales) as tot_sales
+            sum(t.sales) as unit_sales
     from dbo.train t
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     group by t.store_nbr, t.family, sto.city,
@@ -227,11 +227,11 @@ as
 )
 select *
 from storesWithSalesFamilyDate
-order by tot_sales desc;
+order by unit_sales desc;
 
 --== 3000888 records ==--
 --== 00:00:35.277 to run ==--
---== Store number 2 had the most sales under the Grocery l on the date
+--== Store number 2 had the most unit sales under the Grocery l on the date
 --== of 2016-05-02 ==--
 
 
@@ -265,8 +265,8 @@ as
             t.family,
             sto.[state],
             t.[date],
-            avg(t.sales) as avg_sales,
-            lag(t.sales) over (order by t.[date]) as daily_sales
+            avg(t.sales) as avg_unit_sales,
+            lag(t.sales) over (order by t.[date]) as daily_unit_sales
     from dbo.train t
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     group by t.store_nbr, t.family, sto.city,
@@ -274,7 +274,7 @@ as
 )
 select *,
         format(
-                (avg_sales - lag(avg_sales) over (order by [date])), 'P'
+                (avg_unit_sales - lag(avg_unit_sales) over (order by [date])), 'P'
         ) as sales_difference
 from storesWithAveragesGrowth;
 
@@ -292,7 +292,7 @@ as
             sto.[state],
             format(t.[date], 'yyyy') as yr,
             format(t.[date], 'MM') as mth,
-            sum(t.sales) as revenue
+            sum(t.sales) as unit_revenue
     from dbo.train t 
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     where t.store_nbr = sto.store_nbr
@@ -303,11 +303,11 @@ select ssmm.store_nbr,
         ssmm.[state],
         ssmm.yr as curr_yr,
         ssmm.mth as curr_mth,
-        ssmm.revenue as curr_mth_revenue,
+        ssmm.unit_revenue as curr_mth_revenue,
         lag(ssmm.yr, 12) over (order by ssmm.yr, ssmm.mth) as prev_yr,
         lag(ssmm.mth, 12) over (order by ssmm.yr, ssmm.mth) as comp_mth,
-        lag(ssmm.revenue, 12) over (order by ssmm.yr, ssmm.mth) as prev_12_mths,
-        ssmm.revenue - lag(ssmm.revenue, 12) over (order by ssmm.yr, ssmm.mth) as mth2mth_diff
+        lag(ssmm.unit_revenue, 12) over (order by ssmm.yr, ssmm.mth) as prev_12_mths,
+        ssmm.unit_revenue - lag(ssmm.unit_revenue, 12) over (order by ssmm.yr, ssmm.mth) as mth2mth_diff
 from storeSalesWithMonthlyMetrics ssmm
 order by curr_yr, curr_mth;
 
@@ -327,17 +327,17 @@ as
         select distinct t.store_nbr as store,
                 t.family as department,
                 t.[date],
-                sum(t.sales) as revenue,
+                sum(t.sales) as unit_revenue,
                 lag(t.sales, 1) over (
                         partition by t.family
                         order by t.[date]
-                ) as sale_before
+                ) as unit_sale_before
         from dbo.train t 
         group by t.store_nbr, t.family,
                 t.[date], t.sales
 )
 select *,
-        format((revenue - sale_before) / 2, 'P') as vs_15th_of_April
+        format((unit_revenue - unit_sale_before) / 2, 'P') as vs_15th_of_April
 from storeEarthquakeSales
 where [date] in ('2013-04-16', '2014-04-16', '2015-04-16', '2016-04-16', '2017-04-16');
 
@@ -373,7 +373,7 @@ as
 (
         select dateadd(day, 0, t.[date]) as paydate,
                 dateadd(week, 2, t.[date]) as bi_weekly_date,
-                sum(t.sales) as sales
+                sum(t.sales) as unit_sales
         from dbo.train t 
         join dbo.transactions trns on trns.store_nbr = t.store_nbr
         where t.store_nbr = trns.store_nbr
@@ -393,7 +393,7 @@ as
         select dateadd(day, 0, t.[date]) as paydate,
                 dateadd(week, 2, t.[date]) as bi_weekly_date,
                 eomonth(t.[date]) as month_last_day,
-                sum(t.sales) as sales
+                sum(t.sales) as unit_sales
         from dbo.train t 
         join dbo.transactions trns on trns.store_nbr = t.store_nbr
         where t.store_nbr = trns.store_nbr
@@ -416,7 +416,7 @@ as
         select dateadd(day, 0, t.[date]) as paydate,
                 dateadd(week, 2, t.[date]) as bi_weekly_date,
                 eomonth(t.[date]) as month_last_day,
-                sum(t.sales) as sales
+                sum(t.sales) as unit_sales
         from dbo.train t 
         join dbo.transactions trns on trns.store_nbr = t.store_nbr
         where day(dateadd(day, 0, t.[date])) = (15)
@@ -427,11 +427,11 @@ as
         select impD.paydate,
                 impD.bi_weekly_date,
                 impD.month_last_day,
-                lag(impD.sales) over (
+                lag(impD.unit_sales) over (
                         order by impD.paydate
                 ) as prev_sales,
-                impD.sales,
-                impD.sales - lag(impD.sales) over (
+                impD.unit_sales,
+                impD.unit_sales - lag(impD.unit_sales) over (
                         order by impD.paydate
                 ) as sales_diff
         from impactedDates impD
@@ -466,11 +466,11 @@ as
                 he.[type],
                 he.transferred,
                 tr.[date],
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
                 percentile_cont(0.5) 
                         within group (order by (tr.sales + tr.onpromotion + 
                                                 trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_median
+                        over (partition by tr.store_nbr) as store_unit_median
         from dbo.train tr 
         join dbo.stores sto on sto.store_nbr = tr.store_nbr
         join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
@@ -503,10 +503,10 @@ as
                 he.transferred,
                 tr.[date],
                 count(trns.transactions) as store_frequency,
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
                 percentile_cont(0.5) 
                         within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_median,
+                        over (partition by tr.store_nbr) as store_unit_median,
                 rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
         from dbo.train tr 
         join dbo.stores sto on sto.store_nbr = tr.store_nbr
@@ -521,7 +521,7 @@ as
 select *
 from stoFeatCentralTendency
 where store_rank = 1
-order by store_median desc;
+order by store_unit_median desc;
 
 --== 4983 records ==--
 --== 00:00:03.502 to run ==--
@@ -534,10 +534,10 @@ as
 (
         select tr.store_nbr,
                 count(trns.transactions) as store_frequency,
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_mean,
+                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
                 percentile_cont(0.5) 
                         within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_median,
+                        over (partition by tr.store_nbr) as store_unit_median,
                 rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
         from dbo.train tr 
         join dbo.stores sto on sto.store_nbr = tr.store_nbr
@@ -550,7 +550,7 @@ as
 select distinct *
 from storeWithCentralTendency
 where store_rank = 1
-order by store_median desc;
+order by store_unit_median desc;
 
 --== 58 records ==--
 --== 00:00:03.603 to run ==--
