@@ -13,4 +13,4 @@ There are a total of six data sets but only four were analyzed for this process.
     - 9. Transactions
     - 10. Transferred
 
-The dates are from 2013 to 2017
+The dates range from the earliest of January 1st, 2013 to August 15th, 2017.
