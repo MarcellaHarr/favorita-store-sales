@@ -448,7 +448,7 @@ select * from impactedSales;
 
 -- .) view train and stores table
 
---==        qst#: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
+--==        qst#7: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
 
 
 
@@ -456,7 +456,7 @@ select * from impactedSales;
 --              store_nbr, family, date, state, type, transferred, 
 --              transactions, onpromotion, dcoilwtico, sales
 
---==        qst#: What is the measure of the mean & median?
+--==        qst#8: What is the measure of the mean & median?
 ;with storeFeatsTendency
 as 
 (
@@ -491,7 +491,7 @@ order by store_nbr;
 
 
 
---==        qst#: What is the measure of the mean / median/ mode?
+--==        qst#9: What is the measure of the mean / median/ mode?
 
 ;with stoFeatCentralTendency
 as 
@@ -528,6 +528,8 @@ order by store_unit_median desc;
 --== This query removed the years 2016 and 2017 ==--
 
 
+
+--==        qst#10: What is the measure of the mean / median/ mode?
 
 ;with storeWithCentralTendency
 as 
