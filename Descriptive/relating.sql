@@ -346,7 +346,7 @@ where [date] in ('2013-04-16', '2014-04-16', '2015-04-16', '2016-04-16', '2017-0
 
 
 
--- .) view trains and transactions table
+-- 13.) view trains and transactions table
 
 --==        qst#6: How are sales impacted by bi-weekly pay periods of the 15th & last day of each month?
 
@@ -446,13 +446,13 @@ select * from impactedSales;
 
 
 
--- .) view train and stores table
+-- 14.) view train and stores table
 
 --==        qst#7: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
 
 
 
--- .) view features table: 
+-- 15.) view features table: 
 --              store_nbr, family, date, state, type, transferred, 
 --              transactions, onpromotion, dcoilwtico, sales
 
@@ -491,6 +491,9 @@ order by store_nbr;
 
 
 
+-- 16.) view features table: 
+--              store_nbr, family, date, state, type, transferred, 
+--              transactions, onpromotion, dcoilwtico, sales
 --==        qst#9: What is the measure of the mean / median/ mode?
 
 ;with stoFeatCentralTendency
@@ -529,6 +532,10 @@ order by store_unit_median desc;
 
 
 
+
+-- 17.) view features table: 
+--              store_nbr, family, date, state, type, transferred, 
+--              transactions, onpromotion, dcoilwtico, sales
 --==        qst#10: What is the measure of the mean / median/ mode?
 
 ;with storeWithCentralTendency
