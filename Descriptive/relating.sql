@@ -446,9 +446,39 @@ select * from impactedSales;
 
 
 
--- 14.) view train and stores table
+-- 14.) view transaction and stores table
 
 --==        qst#7: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
+
+
+;with transactionBefore
+as
+(
+        select store_nbr as store_number1,
+                dateadd(week, -2, [date]) as two_weeks_before_earthquake,
+                sum(transactions) as transaction_before
+        from dbo.transactions
+        where [date] = dateadd(week, -2, '2016-04-16')
+        group by store_nbr, [date]
+)
+, transactionBeforeAfter
+as
+(
+        select store_number1,
+                two_weeks_before_earthquake,
+                transaction_before,
+                dateadd(week, 2, trns.[date]) as two_weeks_after_earthquake,
+                sum(trns.transactions) as transaction_after
+        from transactionBefore
+        right join dbo.transactions trns on trns.store_nbr = transactionBefore.store_number1
+        where trns.[date] = dateadd(week, 2, '2016-04-16')
+        group by store_number1, two_weeks_before_earthquake, transaction_before, trns.[date], trns.transactions
+)
+select *
+from transactionBeforeAfter;
+
+
+
 
 
 
@@ -488,6 +518,50 @@ order by store_nbr;
 
 --== 304260 records ==--
 --== 00:00:05.140 to run ==--
+
+
+
+-- ;with storeFeatsTendency
+-- as 
+-- (
+--         select distinct tr.store_nbr as store_number,
+--                 avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
+--                 percentile_cont(0.5) within group (
+--                         order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
+--                         over (partition by tr.store_nbr) as store_unit_median
+--         from dbo.train tr 
+--         join dbo.stores sto on sto.store_nbr = tr.store_nbr
+--         join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
+--         join dbo.holidays_events he on he.[date] = tr.[date]
+--         join dbo.oil ol on ol.[date] = tr.[date]
+--         group by tr.store_nbr, tr.sales, tr.onpromotion, trns.transactions, ol.dcoilwtico
+-- )
+-- select *
+-- from storeFeatsTendency
+-- group by store_number, store_unit_mean, store_unit_median;
+
+
+;with storeFeatsTendency
+as 
+(
+        select distinct tr.store_nbr as store_number,
+                tr.family as department,
+                avg(tr.sales + trns.transactions) / 2.0 as store_unit_mean
+        from dbo.train tr 
+        join dbo.stores sto on sto.store_nbr = tr.store_nbr
+        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
+        group by tr.store_nbr, tr.family, tr.sales, trns.transactions
+)
+select *,
+        percentile_cont(0.5) within group (
+                order by (store_unit_mean))
+                over (partition by store_number, department) as store_unit_median
+from storeFeatsTendency
+group by store_number, department, store_unit_mean;
+
+
+
+
 
 
 
