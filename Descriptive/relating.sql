@@ -21,20 +21,20 @@ from information_schema.columns;
 
 
 -- 3.) create table indexes
-create index trainNmbrSalesDate_idx
-on train (store_nbr, sales, train_date);
+-- create index trainNmbrSalesDate_idx
+-- on train (store_nbr, sales, train_date);
 
-create index storesNmbrCityState_idx
-on stores (store_nbr, city, [state]);
+-- create index storesNmbrCityState_idx
+-- on stores (store_nbr, city, [state]);
 
-create index transNmbrTransDate_idx
-on transactions (store_nbr, transactions,trn_date);
+-- create index transNmbrTransDate_idx
+-- on transactions (store_nbr, transactions, [date]);
 
-create index oilPricesDate_idx
-on oil (dcoilwtico, oil_date);
+-- create index oilPricesDate_idx
+-- on oil (dcoilwtico, oil_date);
 
-create index heNmeTrnferdDate_idx 
-on holidays_events (locale_name, transferred, hol_date);
+-- create index heNmeTrnferdDate_idx 
+-- on holidays_events (locale_name, transferred, hol_date);
 
 
 --== train indx took 00:01:10.989 ==--
@@ -485,89 +485,161 @@ from transactionBeforeAfter;
 -- 15.) view features table: 
 --              store_nbr, family, date, state, type, transferred, 
 --              transactions, onpromotion, dcoilwtico, sales
+--              mean is normal distributions
+--              median is skewed distributions
 
---==        qst#8: What is the measure of the mean & median?
-;with storeFeatsTendency
-as 
+--==        qst#8: What is the measure of the mean & median (central tendency)?
+
+select trns.store_nbr as Store,
+        sum(trns.transactions) as Transactions,
+        cast(round(avg(trns.transactions), 2) as decimal(10, 2)) as transMean
+from dbo.transactions trns
+group by trns.store_nbr
+order by trns.store_nbr;
+
+--== 54 records ==--
+
+
+
+select tr.store_nbr as Store,
+        sum(tr.sales) as Transactions,
+        cast(round(avg(tr.sales), 2) as decimal(10, 2)) as unitsMean
+from dbo.train tr
+group by tr.store_nbr
+order by tr.store_nbr;
+
+--== 54 records ==--
+
+
+;with storeTrans
+as
 (
-        select tr.store_nbr,
-                tr.family,
-                sto.[state],
-                he.[type],
-                he.transferred,
-                tr.[date],
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
-                percentile_cont(0.5) 
-                        within group (order by (tr.sales + tr.onpromotion + 
-                                                trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_unit_median
-        from dbo.train tr 
-        join dbo.stores sto on sto.store_nbr = tr.store_nbr
-        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
-        join dbo.holidays_events he on he.[date] = tr.[date]
-        join dbo.oil ol on ol.[date] = tr.[date]
-        group by tr.store_nbr, tr.family, sto.[state],
-                 he.[type], he.transferred, tr.[date],
-                 tr.sales, tr.onpromotion, trns.transactions,
-                 ol.dcoilwtico
+        select trns.store_nbr as Store,
+                sum(trns.transactions) as Transactions,
+                cast(round(avg(trns.transactions), 2) as decimal(10, 2)) as transMean
+        from dbo.transactions trns
+        group by trns.store_nbr
 )
+, storeUnits
+as
+(
+        select tr.store_nbr as Store,
+                sum(tr.sales) as Units,
+                cast(round(avg(tr.sales), 2) as decimal(10, 2)) as unitsMean
+        from dbo.train tr
+        group by tr.store_nbr
+)
+select sT.Store,
+        sT.Transactions,
+        sU.Units,
+        sT.transMean,
+        sU.unitsMean
+into storeMean
+from storeTrans sT
+        join storeUnits sU on sT.Store = sU.Store;
+
+--== 54 records ==--
+--== 00:00:03.398 runtime ==--
+--== Mean Dataframe CTE ==--
+
+
 select *
-from storeFeatsTendency
-order by store_nbr;
+from storeMean;
+
+--== 54 records ==--
+--== 00:00:00.004 runtime ==--
 
 
---== 304260 records ==--
---== 00:00:05.140 to run ==--
+select Store,
+        sum(transMean + unitsMean) / 2.0 Mean
+from storeMean
+group by Store
+order by Store;
+
+--== 54 records ==--
+--== 00:00:00.160 runtime ==--
+--== Mean Query ==--
 
 
-
--- ;with storeFeatsTendency
--- as 
--- (
---         select distinct tr.store_nbr as store_number,
---                 avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
---                 percentile_cont(0.5) within group (
---                         order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
---                         over (partition by tr.store_nbr) as store_unit_median
---         from dbo.train tr 
---         join dbo.stores sto on sto.store_nbr = tr.store_nbr
---         join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
---         join dbo.holidays_events he on he.[date] = tr.[date]
---         join dbo.oil ol on ol.[date] = tr.[date]
---         group by tr.store_nbr, tr.sales, tr.onpromotion, trns.transactions, ol.dcoilwtico
--- )
--- select *
--- from storeFeatsTendency
--- group by store_number, store_unit_mean, store_unit_median;
-
-
-;with storeFeatsTendency
+;with meanQuery
 as 
 (
-        select distinct tr.store_nbr as store_number,
-                tr.family as department,
-                avg(tr.sales + trns.transactions) / 2.0 as store_unit_mean
-        from dbo.train tr 
-        join dbo.stores sto on sto.store_nbr = tr.store_nbr
-        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
-        group by tr.store_nbr, tr.family, tr.sales, trns.transactions
+        select Store,
+                sum(transMean + unitsMean) / 2.0 Mean
+        from storeMean
+        group by Store
 )
-select *,
+select mQ.Store,
+        sM.Transactions,
+        sM.Units,
+        mQ.Mean
+into storeMeanDF
+from meanQuery mQ
+        join storeMean sM on mQ.Store = sM.Store;
+
+--== 54 records ==--
+--== 00:00:00.018 runtime ==--
+--== Store Mean DF CTE ==--
+
+
+select *
+from storeMeanDF;
+
+--== 54 records ==--
+--== 00:00:00.013 runtime ==--
+
+
+select Store,
+        Transactions,
+        Units,
+        Mean,
         percentile_cont(0.5) within group (
-                order by (store_unit_mean))
-                over (partition by store_number, department) as store_unit_median
-from storeFeatsTendency
-group by store_number, department, store_unit_mean;
+                order by (Units + Transactions))
+                over (partition by Store) as Median
+from storeMeanDF;
+
+--== 54 records ==--
+--== 00:00:00.020 runtime ==--
+--== Store Mean and Median ==--
 
 
+;with storeMeanMedian
+as 
+(
+        select Store,
+                Transactions,
+                Units,
+                Mean,
+                percentile_cont(0.5) within group (
+                        order by (Units + Transactions))
+                        over (partition by Store) as Median
+        from storeMeanDF
+)
+select sMM.Store,
+        sM.Transactions,
+        sM.Units,
+        sM.Mean,
+        sMM.Median
+into storeMeanMedianDF
+from storeMeanMedian sMM
+        join storeMeanDF sM on sMM.Store = sM.Store;
+
+--== 54 records ==--
+--== 00:00:02.877 runtime ==--
+--== Store Mean & Median Dataframe CTE==--
 
 
+select *
+from storeMeanMedianDF;
+
+--== 54 records ==--
+--== 00:00:00.011 runtime ==--
 
 
 
 -- 16.) view features table: 
---              store_nbr, family, date, state, type, transferred, 
---              transactions, onpromotion, dcoilwtico, sales
+--              store_nbr, transactions, sales
+
 --==        qst#9: What is the measure of the mean / median/ mode?
 
 ;with stoFeatCentralTendency
@@ -606,35 +678,6 @@ order by store_unit_median desc;
 
 
 
-
--- 17.) view features table: 
+-- .) view features table: 
 --              store_nbr, family, date, state, type, transferred, 
 --              transactions, onpromotion, dcoilwtico, sales
---==        qst#10: What is the measure of the mean / median/ mode?
-
-;with storeWithCentralTendency
-as 
-(
-        select tr.store_nbr,
-                count(trns.transactions) as store_frequency,
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
-                percentile_cont(0.5) 
-                        within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_unit_median,
-                rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
-        from dbo.train tr 
-        join dbo.stores sto on sto.store_nbr = tr.store_nbr
-        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
-        join dbo.holidays_events he on he.[date] = tr.[date]
-        join dbo.oil ol on ol.[date] = tr.[date]
-        group by tr.store_nbr, tr.sales, tr.onpromotion, 
-                trns.transactions, ol.dcoilwtico
-)
-select distinct *
-from storeWithCentralTendency
-where store_rank = 1
-order by store_unit_median desc;
-
---== 58 records ==--
---== 00:00:03.603 to run ==--
---== Noticed that store number 52 duplicates two times ==--
