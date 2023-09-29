@@ -62,138 +62,165 @@ select top 10 *
 from dbo.holidays_events;
 
 
--- 5.) view stores, transactions
+
+-- 5.) view all tables of counts and sums
+
+select count(distinct store_nbr) Store_Amount,
+        count(distinct family) Department_Amount,
+        count(distinct sales) Sales_Amount,
+        sum(sales) Sales_Total,
+        count(distinct onpromotion) On_Promotion_Amount,
+        sum(onpromotion) On_Promotion_Total,
+        min([date]) Earliest_Date,
+        max([date]) Latest_Date
+from dbo.train;
+
+select count(distinct store_nbr)Store_Amount,
+        count(distinct transactions) Transactions_Amount,
+        sum(transactions) Transactions_Total,
+        min([date]) Earliest_Date,
+        max([date]) Latest_Date
+from dbo.transactions;
+
+select count(distinct store_nbr) Store_Amount,
+        count(distinct city) City_Amount,
+        count(distinct [state]) State_Amount,
+        count(distinct [type]) Type_Amount,
+        count(distinct cluster) Cluster_Amount,
+        sum(cluster) Cluster_Total
+from dbo.stores;
+
+select count(distinct dcoilwtico) Oil_Amount,
+        sum(dcoilwtico) Oil_Total,
+        min([date]) Earliest_Date,
+        max([date]) Latest_Date
+from dbo.oil;
+
+select count(distinct [type]) Type_Amount,
+        count(distinct locale) Locale_Amount,
+        count(distinct locale_name) Locale_Name_Amount,
+        count(distinct [description]) Description_Amount,
+        count(distinct transferred) Transferred_Amount,
+        min([date]) Earliest_Date,
+        max([date]) Latest_Date
+from dbo.holidays_events;
+
+
+-- 6.) view stores, transactions
 
 --==          qst#1: What stores have the maximum transactions? ==--
 ;with storeTrans_cte
 as
 (
     select store_nbr,
-            max(transactions) as max_trans
+            max(transactions) as Max_Transactions
     from dbo.transactions
     group by store_nbr
 ),
 storesWithTrans as
 (
-    select sto.store_nbr,
-        sto.city,
-        sto.[state],
-        st.max_trans
+    select sto.store_nbr Store,
+        sto.city City,
+        sto.[state] State_Name,
+        Max_Transactions,
+        (case when Max_Transactions > 50000 then 'Top-range'
+                when Max_Transactions > 30000 then 'Mid-range'
+                else 'Low-range'
+        end) Maximum_Range
     from dbo.stores sto
     inner join storeTrans_cte st 
         on sto.store_nbr = st.store_nbr
 )
 select * 
 from storesWithTrans
-order by max_trans desc;
+order by Store;
 
 --== Sorted table with 54 records ==--
+--== 00:00:00.054 runtime ==--
 --== Stores in Pichincha & Tungurahua state are top 10 ==--
 
 
 
--- 6.) view stores and train table
+-- 7.) view stores and train table
 
---==        qst#2: Which stores had the most on-promotions?
+--==        qst#2: Which store(s) had the most on-promotions?
 ;with storePromos_cte
 as
 (
     select store_nbr,
             family,
-            sum(onpromotion) as tot_promos
+            sum(onpromotion) as Promos_Total
     from dbo.train
     group by store_nbr, family
 ),
 storeDetails as 
 (
-    select sp.store_nbr,
-            sp.family,
-            sto.city,
-            sto.[state],
-            sp.tot_promos
+    select sp.store_nbr Store,
+            sp.family Department,
+            sto.city City,
+            sto.[state] State_Name,
+            Promos_Total,
+            (case when Promos_Total > 50000 then 'Top-range'
+                when Promos_Total > 30000 then 'Mid-range'
+                else 'Low-range'
+            end) Level_Range
     from dbo.stores sto
     inner join storePromos_cte sp
         on sto.store_nbr = sp.store_nbr
 )
 select *
 from storeDetails
-order by tot_promos desc;
+order by Promos_Total desc;
 
 --== 1782 records total ==--
---== stores in Manabi, Pichincha, and Tungurahua state are the top 10 ==--
+--== 00:00:01.048 runtime ==--
 --== store 53 has the most on promotions ==--
 
 
 
--- 7.) view train, stores, and holidays and events table
+-- 8.) view train, stores, and holidays and events table
 
---==        qst#3: Were promotions in relation to the holidays and events?
+--==        qst#3: Were promotions in relation to the holidays and events' table?
 --==        select average(onpromotion) from cte where type = "Transfer"
-;with storeDeets
-as
-(
-    select t.store_nbr,
-            t.family,
-            t.onpromotion,
-            t.[date],
-            avg((t.onpromotion)) as avg_promos,
-            cast((avg(t.onpromotion) - lag (avg(t.onpromotion)) 
-                 over( order by t.[date] asc
-                     ))/ lag(avg(t.onpromotion)) 
-                 over ( order by t.[date] asc)*100 as float) as promo_growth
-    from dbo.train t 
-    join dbo.stores sto on t.store_nbr = sto.store_nbr
-    where sto.store_nbr = t.store_nbr and
-            t.onpromotion <> 0
-    group by t.store_nbr, t.family,
-             t.onpromotion, t.[date]
-)
-,storeHolidays as
-(
-    select st.store_nbr,
-            he.locale_name,
-            st.family,
-            he.[type],
-            he.transferred,
-            he.[date],
-            st.avg_promos,
-            st.promo_growth
-    from dbo.holidays_events he
-    join storeDeets st on he.[date] = st.[date]
-    where st.[date] = he.[date]
-    group by st.store_nbr, he.locale_name, st.family,
-            he.[type], he.transferred, he.[date],
-            st.onpromotion, st.avg_promos, st.promo_growth
-)
-select *
-from storeHolidays
-where [type] = 'Transfer'
-order by promo_growth desc;
+
+select sto.store_nbr Store,
+        tr.family Department,
+        he.[type] Store_Type,
+        he.[date] Dates,
+        tr.onpromotion Promotions,
+        tr.onpromotion - lag(tr.onpromotion) over (
+                order by he.[date] 
+        ) Promo_Growth,
+        (tr.onpromotion - lag(tr.onpromotion) over (
+                order by he.[date]
+        ) / lag(tr.onpromotion) over (order by he.[date])*100) Promo_Perc_Growth
+from dbo.train tr
+        join dbo.stores sto on tr.store_nbr = sto.store_nbr
+        join dbo.holidays_events he on tr.[date] = he.[date]
+where tr.onpromotion <> 0 and he.[type] = 'Transfer'
+group by sto.store_nbr, tr.family, he.[type],
+        he.[date], tr.onpromotion, sto.[type];
 
 --== 6312 records ==--
+--== 00:00:00.255 runtime ==--
 
 --== DATA NOTES: A transferred day is more like a normal day than a holiday. To find 
 --==            the day that it was actually celebrated, look for the corresponding 
 --==            row where type is Transfer. ==--
 
---==    Type transfer has Transferred as false, assuming that the dates are the actual dates
---==    the holiday or event fell on but wasn't move to another date by the government.
---==    I see that the promoted items of a store were promoted higher than the items that
---==    were being promoted.
 
 
 
+-- .9) view stores and train table
 
--- .8) view stores and train table
-
---==        qst#4a: Which stores had the most unit sales?
+--==        qst#4a: Which store(s) had the most unit sales?
 ;with storeMostSales
 as 
 (
-    select t.store_nbr,
-            sto.city,
-            sto.[state],
-            sum(t.sales) as unit_sales
+    select t.store_nbr Store,
+            sto.city City_,
+            sto.[state] State_,
+            sum(t.sales) as Unit_Sales_Total
     from dbo.train t
     join dbo.stores sto on sto.store_nbr = t.store_nbr
     where sto.store_nbr = t.store_nbr
@@ -201,89 +228,86 @@ as
 )
 select *
 from storeMostSales sms
-order by unit_sales desc;
+order by Unit_Sales_Total desc;
 
 --== 54 records ==--
 --== Store number 44 had the most unit sales ==--
 
 
+-- 10.) view stores and train table
 
--- .9) view stores and train
+--==            qst#4b: What elements for store #44 generates their top unit sales?
 
---==        qst#4b: Which stores had the most unit sales by family/day?
-;with storesWithSalesFamilyDate
-as 
-(
-    select t.store_nbr,
-            t.family,
-            sto.city,
-            sto.[state],
-            t.[date],
-            sum(t.sales) as unit_sales
-    from dbo.train t
-    join dbo.stores sto on sto.store_nbr = t.store_nbr
-    group by t.store_nbr, t.family, sto.city,
-            sto.[state], t.[date]
-)
-select *
-from storesWithSalesFamilyDate
-order by unit_sales desc;
+select distinct tr.store_nbr Store,
+        sto.city City_,
+        sto.[state] State_,
+        tr.family Department,
+        round(sum(tr.sales), 2) Unit_Sales_Total
+from dbo.train tr 
+        join dbo.stores sto on tr.store_nbr = sto.store_nbr
+where tr.store_nbr = 44
+group by tr.family, tr.store_nbr, sto.[state], sto.city
+order by Unit_Sales_Total desc;
 
---== 3000888 records ==--
---== 00:00:35.277 to run ==--
---== Store number 2 had the most unit sales under the Grocery l on the date
---== of 2016-05-02 ==--
-
-
-
--- .10) view stores and train
-
---==        qst#4c: What were the averages and growth rate of sales by family/date?
--- ;with storesWithAveragesGrowth
--- as 
--- (
---     select t.store_nbr,
---             t.family,
---             sto.[state],
---             t.[date],
---             avg(t.sales) as avg_sales,
---             lag(t.sales) over (order by t.[date]) as daily_sales,
---             t.sales - lag(t.sales) over (order by t.[date]) as sales_difference
---     from dbo.train t
---     join dbo.stores sto on sto.store_nbr = t.store_nbr
---     group by t.store_nbr, t.family, sto.city,
---             sto.[state], t.[date], t.sales
--- )
--- select *
--- from storesWithAveragesGrowth;
-
-
-;with storesWithAveragesGrowth
-as 
-(
-    select t.store_nbr,
-            t.family,
-            sto.[state],
-            t.[date],
-            avg(t.sales) as avg_unit_sales,
-            lag(t.sales) over (order by t.[date]) as daily_unit_sales
-    from dbo.train t
-    join dbo.stores sto on sto.store_nbr = t.store_nbr
-    group by t.store_nbr, t.family, sto.city,
-            sto.[state], t.[date], t.sales
-)
-select *,
-        format(
-                (avg_unit_sales - lag(avg_unit_sales) over (order by [date])), 'P'
-        ) as sales_difference
-from storesWithAveragesGrowth;
-
+--== 33 records ==--
+--== 00:00:00.330 runtime ==--
+--== Store 44's Grocery I department generates the most unit sales ==--
 
 
 
 -- .11) view stores and train
 
---==        **qst#4d: What were the sales difference by family/YR/MTH?
+--==        qst#4c: Which store(s) had the most unit sales by family/date?
+
+select distinct tr.store_nbr Store,
+        sto.city City_,
+        sto.[state] State_,
+        tr.family Department,
+        tr.[date] Date_,
+        round(sum(tr.sales), 2) Unit_Sales_Total
+from dbo.train tr 
+        join dbo.stores sto on tr.store_nbr = sto.store_nbr
+group by tr.[date], tr.family, tr.store_nbr, sto.[state], sto.city
+order by Unit_Sales_Total desc;
+
+--== 3000888 records==--
+--== 00:00:25.544 runtime ==--
+--== Store 2 has the most unit sales in Grocerry I on May 2nd, 2016 ==--
+--== Store 39 is second runner up in the Meat's department on December 7th, 2016 ==--
+--== 2016 had the most unit sales ==--
+
+
+
+-- .12) view stores and train
+
+--==        qst#4d: What were the averages and growth rate of sales by family/date?
+;with storesWithAveragesGrowth
+as 
+(
+    select t.store_nbr Store,
+            t.family Department,
+            sto.[state] State_,
+            t.[date] Date_,
+            avg(t.sales) Unit_Sales_Average,
+            lag(avg(t.sales)) over (order by t.[date]) Unit_Sales_Daily
+    from dbo.train t
+        join dbo.stores sto on sto.store_nbr = t.store_nbr
+    group by t.store_nbr, t.family, sto.city,
+            sto.[state], t.[date], t.sales
+)
+select *,
+        format(
+                (Unit_Sales_Average - lag(Unit_Sales_Average) over (order by Date_)), 'P'
+        ) as Difference_
+from storesWithAveragesGrowth
+where Unit_Sales_Average <> 0 and Unit_Sales_Daily <> 0;
+
+
+
+
+-- .13) view stores and train
+
+--==        **qst#43: What were the sales difference by family/YR/MTH?
 ;with storeSalesWithMonthlyMetrics
 as 
 (
@@ -311,14 +335,12 @@ select ssmm.store_nbr,
 from storeSalesWithMonthlyMetrics ssmm
 order by curr_yr, curr_mth;
 
-
-
 --== 3000888 records ==--
 --== 00:00:21.194 to run ==--
 --== Earlies date 2013-01-01 to latest date 2017-08-15 ==--
 
 
--- 12.)
+-- 14.)
 
 --==        qst#5: How much did sales suffer from the earthquake in Ecuador on 2016-04-16?
 ;with storeEarthquakeSales
@@ -346,7 +368,7 @@ where [date] in ('2013-04-16', '2014-04-16', '2015-04-16', '2016-04-16', '2017-0
 
 
 
--- 13.) view trains and transactions table
+-- 14.) view trains and transactions table
 
 --==        qst#6: How are sales impacted by bi-weekly pay periods of the 15th & last day of each month?
 
@@ -446,7 +468,7 @@ select * from impactedSales;
 
 
 
--- 14.) view transaction and stores table
+-- 15.) view transaction and stores table
 
 --==        qst#7: How many transactions happened 2-wks before and 2-wks after the earthquake in Ecuador on 2016-04-16?
 
@@ -482,7 +504,7 @@ from transactionBeforeAfter;
 
 
 
--- 15.) view features table: 
+-- 16.) view features table: 
 --              store_nbr, family, date, state, type, transferred, 
 --              transactions, onpromotion, dcoilwtico, sales
 --              mean is normal distributions
@@ -637,44 +659,22 @@ from storeMeanMedianDF;
 
 
 
--- 16.) view features table: 
---              store_nbr, transactions, sales
+-- 17.) view table: 
+--              store mean median dataframe
 
---==        qst#9: What is the measure of the mean / median/ mode?
+--==        qst#9: What is the measure of the mean / median/ mode (central tendency)?
 
-;with stoFeatCentralTendency
-as 
-(
-        select tr.store_nbr,
-                tr.family,
-                sto.[state],
-                he.[type],
-                he.transferred,
-                tr.[date],
-                count(trns.transactions) as store_frequency,
-                avg(tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico) / 4.0 as store_unit_mean,
-                percentile_cont(0.5) 
-                        within group (order by (tr.sales + tr.onpromotion + trns.transactions + ol.dcoilwtico))
-                        over (partition by tr.store_nbr) as store_unit_median,
-                rank() over (partition by tr.store_nbr order by count(trns.transactions) desc) as store_rank
-        from dbo.train tr 
-        join dbo.stores sto on sto.store_nbr = tr.store_nbr
-        join dbo.transactions trns on trns.store_nbr = sto.store_nbr and trns.[date] = tr.[date]
-        join dbo.holidays_events he on he.[date] = tr.[date]
-        join dbo.oil ol on ol.[date] = tr.[date]
-        group by tr.store_nbr, tr.family, sto.[state],
-                 he.[type], he.transferred, tr.[date],
-                 tr.sales, tr.onpromotion, trns.transactions,
-                 ol.dcoilwtico
-)
-select *
-from stoFeatCentralTendency
-where store_rank = 1
-order by store_unit_median desc;
+select store_nbr Store,
+        string_agg(family, ' - ') within group (
+                order by family
+        ) Department_List
+from dbo.train
+group by store_nbr;
 
---== 4983 records ==--
---== 00:00:03.502 to run ==--
---== This query removed the years 2016 and 2017 ==--
+
+--==  ==--
+--==  ==--
+--==  ==--
 
 
 
