@@ -1,6 +1,6 @@
 # Descriptive Analysis
 
-There are a total of six data sets but only four were analyzed for this process. I will focus on specific features from all data sets, __which are as follows:__
+There are a total of six data sets but only four were analyzed for this process. I will focus on specific features/columns from the different data sets, __which are as follows:__
 
     - 1. Store number
     - 2. Family
