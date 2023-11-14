@@ -1,11 +1,20 @@
+# Folder for datasets
 data/
 
+# Folder for images not to be public
 img/
 
+# Folder for test codes
 codeSnapShots/
 
+# Specific VSC
 .vscode
 
+# Copied file moved from another directory
 copyFavoritaPorject.py
 
+# Project Database
 favorita.db
+
+# SQL file
+favorita_store_sales.session.sql
