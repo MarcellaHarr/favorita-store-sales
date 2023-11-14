@@ -1,7 +1,7 @@
 /* 
 DESCRIPTIVE ANALYSIS
 
-2. Relating: SQLite
+2. Relating: SQLite | open db CTRL + SHIFT + P | run query SHIFT + R
 */
 
 -- 1.) view all table information
@@ -185,9 +185,47 @@ group by Store, Department, Store_Type, Dates, Promotions;
 
 select *
 from qst3_DF
-limit 10;
+order by Promo_Percent_Growth desc;
 --== 6312 records ==--
 --== 00:00:00.255 runtime ==--
+--== Store 54 in the Beverages department under the Transfer store type
+--== had the most on-promotions on 2016-05-27 ==--
+
+
+create table if not exists qst3b_DF (
+        Store_ INTEGER,
+        Department_ VARCHAR(75),
+        Store_Type_ TEXT(10),
+        Dates_ DATE,
+        Promotions_ INTEGER,
+        Promo_Growth_ INTEGER,
+        Promo_Percent_Growth_ INTEGER
+);
+insert into qst3b_DF
+with promotionData as
+(
+        select sto.store_nbr as Store,
+                tr.family as Department,
+                he.[type] as Store_Type,
+                he.[date] as Dates,
+                tr.onpromotion as Promotions,
+                tr.onpromotion - lag(tr.onpromotion) over (order by he.[date]) as Promo_Growth,
+                ((tr.onpromotion - lag(tr.onpromotion) over (order by he.[date])) / lag(tr.onpromotion) over (order by he.[date])) * 100.0 as Promo_Percent_Growth
+        from train tr
+                join stores sto on tr.store_nbr = sto.store_nbr
+                join holidays_events he on tr.[date] = he.[date]
+        where he.[type] != 'Transfer'
+)
+select *
+from promotionData
+group by Store, Department, Store_Type, Dates, Promotions;
+
+select *
+from qst3b_DF
+where Store_Type_ = 'Holiday'
+order by Promo_Percent_Growth_ desc;
+--== Store 49 in the Produce department under the Holiday store type 
+--== had the most on-promotions on three occurrences 2016-09-28, 2016-11-02, and 2017-04-12 ==--
 
 --== DATA NOTES: A transferred day is more like a normal day than a holiday. To find 
 --==            the day that it was actually celebrated, look for the corresponding 
@@ -258,7 +296,7 @@ order by Unit_Sales_Total desc;
 --== 00:00:25.544 runtime ==--
 --== Store 2 has the most unit sales in Grocerry I on May 2nd, 2016 ==--
 --== Store 39 is second runner up in the Meat's department on December 7th, 2016 ==--
---== 2016 had the most unit sales ==--
+--== had the most unit sales ==--
 
 
 
@@ -299,7 +337,8 @@ where Unit_Sales_Average <> 0 and Unit_Sales_Daily <> 0;
 
 select *
 from qst4d_DF
-limit 10;
+order by Unit_Sales_Average, Difference_ desc;
+--== Store 39 in the Seafood department had the most Unit_Sales_Average and Difference_ rates on 2015-09-15 ==--
 
 
 
@@ -307,14 +346,14 @@ limit 10;
 -- .11) view stores and train tables
 
 --==        **qst#4e: What were the sales difference by family/YR/MTH?
-
+drop table qst4e_DF;
 create table if not exists qst4e_DF (
         Store INTEGER,
         Department VARCHAR(75),
         State_ VARCHAR(255),
         Current_Year DATE,
         Current_Month DATE,
-        Current_Month_Revenue REAL,
+        Current_Month_Unit_Sales REAL,
         Previous_Year DATE,
         Comparable_Month DATE,
         Prev_12_Months REAL,
@@ -343,7 +382,7 @@ select ssmm.store_nbr as Store,
         ssmm.[state] as State_,
         ssmm.yr as Current_Year,
         ssmm.mth as Current_Month,
-        ssmm.unit_revenue as Current_Month_Revenue,
+        ssmm.unit_revenue as Current_Month_Unit_Sales,
         case
             when ssmm.yr = (select min_year from earliestYear) then cast('' as text)
             else (ssmm.yr - 1)  -- Subtract 1 to get the previous year
@@ -356,6 +395,20 @@ order by Current_Year, Current_Month;
 
 select *
 from qst4e_DF;
+
+select Department, 
+        ceiling(sum(Current_Month_Unit_Sales)) as Current_Month_Unit_Sales,
+        round((avg(Current_Month_Unit_Sales) / (select avg(Current_Month_Unit_Sales) from qst4e_DF)) * 100, 1) as pct
+from qst4e_DF
+group by 1;
+
+select *
+from qst4e_DF
+where Prev_12_Months < (
+    select max(Prev_12_Months)
+    from qst4e_DF df2
+    where df2.Store = qst4e_DF.Store
+);
 --== 99792 records ==--
 --== 00:00:21.194 to run ==--
 --== Earlies date 2013-01-01 to latest date 2017-08-15 ==--
@@ -439,20 +492,20 @@ select *
 from qst4f_DF
 limit 20;
 --== 26,730 records ==--
---== Average unit sales are about 191 units in April 15th, 2013 ==--
---== Average unit sales are about 188 units in April 16th, 2013 ==--
---== Average unit sales are about 205 units in April 15th, 2014 ==--
---== Average unit sales are about 231 units in April 16th, 2014 ==--
---== Average unit sales are about 224 units in April 17th, 2014 ==--
---== Average unit sales are about 246 units in April 15th, 2015 ==--
---== Average unit sales are about 235 units in April 15th, 2015 ==--
---== Average unit sales are about 257 units in April 17th, 2015 ==--
---== Average unit sales are about 375 units in April 15th, 2016 ==--
---== Average unit sales are about 484 units in April 16th, 2016 ==--
---== Average unit sales are about 714 units in April 17th, 2016 ==--
---== Average unit sales are about 505 units in April 15th, 2017 ==--
---== Average unit sales are about 554 units in April 16th, 2017 ==--
---== Average unit sales are about 436 units in April 17th, 2017 ==--
+--== Average unit sales are about 191 units purchased in April 15th, 2013 ==--
+--== Average unit sales are about 188 units purchased in April 16th, 2013 ==--
+--== Average unit sales are about 205 units purchased in April 15th, 2014 ==--
+--== Average unit sales are about 231 units purchased in April 16th, 2014 ==--
+--== Average unit sales are about 224 units purchased in April 17th, 2014 ==--
+--== Average unit sales are about 246 units purchased in April 15th, 2015 ==--
+--== Average unit sales are about 235 units purchased in April 15th, 2015 ==--
+--== Average unit sales are about 257 units purchased in April 17th, 2015 ==--
+--== Average unit sales are about 375 units purchased in April 15th, 2016 ==--
+--== Average unit sales are about 484 units purchased in April 16th, 2016 ==--
+--== Average unit sales are about 714 units purchased in April 17th, 2016 ==--
+--== Average unit sales are about 505 units purchased in April 15th, 2017 ==--
+--== Average unit sales are about 554 units purchased in April 16th, 2017 ==--
+--== Average unit sales are about 436 units purchased in April 17th, 2017 ==--
 
 
 
@@ -630,7 +683,7 @@ from storeMeanMedian sMM;
 
 
 
--- 17.) view features table: 
+-- 16.) view features table: 
 --              store_nbr, unit, transactions
 --              mean is normal distributions
 --              median is skewed distributions
@@ -709,3 +762,155 @@ join storeMode sm on sMM.Store = sm.Store;
 select *
 from centralTendency;
 --== 54 records ==--
+
+
+
+-- 17.) view features table:
+--              store_nbr, date, transactions
+--              date, dcoilwtico
+--              right join b/c the oil data is what I want matched to
+
+select trn.store_nbr Store_,
+        trn.[date] Date_,
+        o.dcoilwtico Daily_Oil_Prices_WTI
+from transactions trn 
+    right join oil o on o.[date] = trn.[date];
+--== 59667 records ==--
+
+
+create table oilDataTable (
+    Store_ INTEGER,
+    City_ VARCHAR(255),
+    Date_ DATE,
+    Daily_Oil_Prices_WTI FLOAT
+);
+insert into oilDataTable
+with tablesTransAndOil as (
+    select trn.store_nbr Store_,
+        sto.city City_,
+        trn.[date] Date_,
+        o.dcoilwtico Daily_Oil_Prices_WTI
+from transactions trn 
+        join stores sto on sto.store_nbr = trn.store_nbr
+        right join oil o on o.[date] = trn.[date]
+)
+select *
+from tablesTransAndOil;
+
+select *
+from oilDataTable;
+--== 59667 records ==--
+
+
+
+-- 18.) view features table:
+--              oilDataTable
+
+--==        qst#9a: What were the lowest and highest oil prices?
+
+select * 
+from oilDataTable 
+    order by Daily_Oil_Prices_WTI asc;
+--== 59667 records ==--
+--== The lowest daily oil price was 26.19 (West Texas Intermediate) ==--
+
+
+select *
+from oilDataTable 
+    order by Daily_Oil_Prices_WTI desc;
+--== 59667 records ==--
+--== The highest daily oil price was 110.62 (West Texas Intermediate) ==--
+
+
+
+-- 19.) view features table:
+--              oilDataTable
+
+--==        qst#9b: What are the dates and stores with the first change of oil prices occured?
+
+select Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+from (
+    select odt.*,
+        lead(Daily_Oil_Prices_WTI) over 
+            (partition by Store_ order by Date_) as Lead_Price
+    from oilDataTable odt
+) as odt
+where Lead_Price is null;
+--== 55 records ==--
+
+create table noOilPriceChanges (
+    Store_ INTEGER,
+    City_ VARCHAR(255),
+    Date_ DATE,
+    Daily_Oil_Prices_WTI FLOAT
+);
+insert into noOilPriceChanges (
+    Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+)
+select Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+from (
+    select odt.*,
+        lead(Daily_Oil_Prices_WTI) over 
+            (partition by Store_ order by Date_) as Lead_Price
+    from oilDataTable odt
+) as odt
+where Lead_Price is null;
+
+select *
+from noOilPriceChanges;
+--== Shows no change in the daily oil prices for multiple stores
+--== on 2017-08-15 at 47.57 (West Texas Intermediate) ==--
+
+
+
+select Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+from (
+    select odt.*,
+        lag(Daily_Oil_Prices_WTI) over 
+            (partition by Store_ order by Date_) as LAG_Price 
+    from oilDataTable odt
+) odt
+where LAG_Price is not null and LAG_Price <> Daily_Oil_Prices_WTI;
+--== 59192 records ==--
+
+create table oilPriceChanges (
+    Store_ INTEGER,
+    City_ VARCHAR(255),
+    Date_ DATE,
+    Daily_Oil_Prices_WTI FLOAT
+);
+insert into oilPriceChanges (
+    Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+)
+select Store_,
+    City_,
+    Date_,
+    Daily_Oil_Prices_WTI
+from (
+    select odt.*,
+        lag(Daily_Oil_Prices_WTI) over 
+            (partition by Store_ order by Date_) as LAG_Price 
+    from oilDataTable odt
+) odt
+where LAG_Price is not null and LAG_Price <> Daily_Oil_Prices_WTI;
+
+select *
+from oilPriceChanges;
+--== Does show change in the daily oil prices and the first occurence of this is on
+--== 2013-01-03 in Quito, Pinchincha in the amount of 92.16 (West Texas Intermediate) and the last
+--== date is on 2017-08-15 in El Carmen in the amount of 47.57 (West Texas Intermediate) ==--
