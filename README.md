@@ -5,7 +5,7 @@
 <br />
 
 # Introduction
-The purpose of this repository is to showcase a time-series forecasting model that predicts store sales of a major supermarket corporation based in Central America. This Kaggle "Getting Started" competition runs indefinitely with a rolling leaderboard. My goal is to build a model that more accurately predicts the unit sales for thousands of products sold at various Favorita stores. I am also looking to gain a deeper understanding of the data and the corporation through a full statistical analysis. This will give me the opportunity to practice my machine-learning skills, enter my first competition on Kaggle, and gain real-world experience.
+The purpose of this repository is to showcase a time-series forecasting model that predicts store sales of a major supermarket corporation based in South America. This Kaggle "Getting Started" competition runs indefinitely with a rolling leaderboard. My goal is to build a model that more accurately predicts the unit sales for thousands of products sold at various Favorita stores. I am also looking to gain a deeper understanding of the data and the corporation through a full statistical analysis. This will give me the opportunity to practice my machine-learning skills, enter my first competition on Kaggle, and gain real-world experience.
 
 <br />
 
