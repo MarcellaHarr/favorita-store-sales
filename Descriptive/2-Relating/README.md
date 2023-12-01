@@ -11,4 +11,13 @@ Queries, such as viewing detailed table information using `pragma table_info` fo
 Furthermore, a broader perspective was gained by generating queries to gather counts, sums, and date-related insights across multiple tables. For example, the relationships between store attributes, sales, promotions, and transactional data were thoroughly explored, offering a comprehensive overview of the dataset. 
 
 These preliminary queries set the stage for a meticulous examination of relationships critical to deriving meaningful insights during the descriptive analysis.
-
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
