@@ -50,11 +50,12 @@ There are a total of six data sets but only four were analyzed for this process.
 ### Holidays_Events' table
 <table><tr><th>Type_Amount</th><th>Locale_Amount</th><th>Locale_Name_Amount</th><th>Description_Amount</th><th>Transferred_Amount</th><th>Earliest_Date</th><th>Latest_Date</th><tr><tr><td>6</td><td>3</td><td>24</td><td>103</td><td>2</td><td>2012-03-02</td><td>2017-12-26</td></tr></table>
 <br>
+<br>
+<br>
+<br>
 
-
-<style>
-    cite {
-        font-style: normal;
-        text-decoration: underline;
-    }
-</style>
+<p align="right">
+    <a href="../4-Visualization/">
+        <img src="../../src/images/rightarrowGif.gif" width="90"/>
+    </a>
+</p>
