@@ -5,7 +5,7 @@
 <br>
 <br>
 
-### 1. Cleaning
-### 2. Relating
-### 3. Summarize
-### 4. Visualization
+### [1. Cleaning](../Descriptive/1-Cleaning/)
+### [2. Relating](../Descriptive/2-Relating/)
+### [3. Summarize](../Descriptive/3-Summarize/)
+### [4. Visualization](../Descriptive/4-Visualization/)
