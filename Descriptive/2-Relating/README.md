@@ -17,6 +17,6 @@ These preliminary queries set the stage for a meticulous examination of relation
 <br>
 <br>
 
-<a href="../3-Summarize/">
+<a href="../3-Summarize/" style="float: right !important; right: 0 !important;">
     <img src="../../src/images/rightarrowGif.gif" width="90" style="float: right !important;"/>
 </a>
