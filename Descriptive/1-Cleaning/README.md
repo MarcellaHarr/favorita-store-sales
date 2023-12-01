@@ -52,3 +52,12 @@ I began the data preprocessing by creating tables in SQL Server, utilizing the b
 <br>
 
 These thorough cleaning steps ensure a consistent and well-prepared dataset for subsequent analysis and modeling tasks, highlighting the essential need for precision in the process.
+<br>
+<br>
+<br>
+
+<p align="right">
+    <a href="../2-Relating//">
+        <img src="../../src/images/rightarrowGif.gif" width="90"/>
+    </a>
+</p>
