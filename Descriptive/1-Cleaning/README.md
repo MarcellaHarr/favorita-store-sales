@@ -4,7 +4,7 @@ I began the data preprocessing by creating tables in SQL Server, utilizing the b
 <br>
 <br>
 
-![](./src/images/../../../../src/images/lightsaber-collection-HrqAOiTFVH4-unsplash.jpg)<br> source: Photo by <a href="https://unsplash.com/@lightsabercollection?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Lightsaber Collection</a> on <a href="https://unsplash.com/photos/a-green-and-white-machine-sitting-on-top-of-a-table-HrqAOiTFVH4?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
+<img src="../src/../../src/images/lightsaber-collection-HrqAOiTFVH4-unsplash.jpg" width=981px /><br> source: Photo by <a href="https://unsplash.com/@lightsabercollection?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Lightsaber Collection</a> on <a href="https://unsplash.com/photos/a-green-and-white-machine-sitting-on-top-of-a-table-HrqAOiTFVH4?utm_content=creditCopyText&utm_medium=referral&utm_source=unsplash">Unsplash</a>
   
 
 ## Detailed Table Cleaning Breakdown
