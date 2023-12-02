@@ -57,7 +57,7 @@ These thorough cleaning steps ensure a consistent and well-prepared dataset for 
 <br>
 
 <p align="right">
-    <a href="../2-Relating//">
+    <a href="../2-Relating/">
         <img src="../../src/images/rightarrowGif.gif" width="90"/>
     </a>
 </p>
